@@ -4,11 +4,11 @@
     "slug": "Animora",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/unnamed.jpg",
+    "icon": "./assets/unnamed.png",
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
     "splash": {
-      "image": "./assets/unnamed.jpg",
+      "image": "./assets/unnamed.png",
       "resizeMode": "contain",
       "backgroundColor": "#ffffff"
     },
@@ -17,7 +17,7 @@
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/adaptive-icon.png",
+        "foregroundImage": "./assets/unnamed.png",
         "backgroundColor": "#ffffff"
       },
       "edgeToEdgeEnabled": true,
