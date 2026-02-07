@@ -246,7 +246,7 @@ const AnimeDetailScreen = ({ route, navigation }) => {
         {/* Genres */}
         <View style={styles.genresSection}>
           <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-            {anime.genres.map((genre, index) => (
+            {(anime.genres || []).map((genre, index) => (
               <View key={index} style={styles.genreTag}>
                 <Text style={styles.genreText}>{genre}</Text>
               </View>

@@ -1,173 +1,216 @@
-import React, { createContext, useContext, useState, useCallback } from 'react';
-import { mockAnimes, getAnimeStats } from '../data/mockAnimes';
+import React, {
+  createContext,
+  useContext,
+  useState,
+  useCallback,
+  useEffect,
+} from "react"
+import * as Database from "../services/database"
 
-const AnimeContext = createContext();
+const AnimeContext = createContext()
 
 export const useAnime = () => {
-  const context = useContext(AnimeContext);
+  const context = useContext(AnimeContext)
   if (!context) {
-    throw new Error('useAnime must be used within an AnimeProvider');
+    throw new Error("useAnime must be used within an AnimeProvider")
   }
-  return context;
-};
+  return context
+}
+
+const getAnimeStats = (animes) => {
+  const safeGenres = (g) => (Array.isArray(g) ? g : [])
+  return {
+    total: animes.length,
+    watching: animes.filter((a) => a.status === "watching").length,
+    completed: animes.filter((a) => a.status === "completed").length,
+    planToWatch: animes.filter((a) => a.status === "planToWatch").length,
+    onHold: animes.filter((a) => a.status === "onHold").length,
+    dropped: animes.filter((a) => a.status === "dropped").length,
+    favorites: animes.filter((a) => a.isFavorite).length,
+    totalEpisodesWatched: animes.reduce(
+      (sum, a) => sum + (a.currentEpisode || 0),
+      0
+    ),
+  }
+}
 
 export const AnimeProvider = ({ children }) => {
-  const [animes, setAnimes] = useState(mockAnimes);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [filterStatus, setFilterStatus] = useState('all');
-  const [sortBy, setSortBy] = useState('lastWatched');
+  const [animes, setAnimes] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [searchQuery, setSearchQuery] = useState("")
+  const [filterStatus, setFilterStatus] = useState("all")
+  const [sortBy, setSortBy] = useState("lastWatched")
 
-  // Add new anime
-  const addAnime = useCallback((newAnime) => {
+  useEffect(() => {
+    const init = async () => {
+      try {
+        await Database.initDatabase()
+        const loaded = await Database.getAllAnimes()
+        setAnimes(loaded)
+      } catch (e) {
+        console.error("DB init error:", e)
+      } finally {
+        setLoading(false)
+      }
+    }
+    init()
+  }, [])
+
+  const addAnime = useCallback(async (newAnime) => {
     const anime = {
       ...newAnime,
-      id: Date.now().toString(),
-      addedDate: new Date().toISOString().split('T')[0],
+      id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
+      addedDate: new Date().toISOString().split("T")[0],
       lastWatched: null,
-      currentEpisode: 0,
-      currentSeason: 1,
-      rating: 0,
+      currentEpisode: newAnime.currentEpisode ?? 0,
+      currentSeason: newAnime.currentSeason ?? 1,
+      rating: newAnime.rating ?? 0,
       isFavorite: false,
-    };
-    setAnimes(prev => [anime, ...prev]);
-    return anime;
-  }, []);
+    }
+    await Database.addAnime(anime)
+    setAnimes((prev) => [anime, ...prev])
+    return anime
+  }, [])
 
-  // Update anime
-  const updateAnime = useCallback((id, updates) => {
-    setAnimes(prev =>
-      prev.map(anime =>
-        anime.id === id
-          ? { ...anime, ...updates, lastWatched: new Date().toISOString().split('T')[0] }
-          : anime
+  const updateAnime = useCallback(async (id, updates) => {
+    const updateData = {
+      ...updates,
+      lastWatched: new Date().toISOString().split("T")[0],
+    }
+    await Database.updateAnime(id, updateData)
+    setAnimes((prev) =>
+      prev.map((a) => (a.id === id ? { ...a, ...updateData } : a))
+    )
+  }, [])
+
+  const deleteAnime = useCallback(async (id) => {
+    await Database.deleteAnime(id)
+    setAnimes((prev) => prev.filter((a) => a.id !== id))
+  }, [])
+
+  const toggleFavorite = useCallback(
+    async (id) => {
+      const anime = animes.find((a) => a.id === id)
+      if (!anime) return
+      const next = !anime.isFavorite
+      await Database.updateAnime(id, { isFavorite: next })
+      setAnimes((prev) =>
+        prev.map((a) => (a.id === id ? { ...a, isFavorite: next } : a))
       )
-    );
-  }, []);
+    },
+    [animes]
+  )
 
-  // Delete anime
-  const deleteAnime = useCallback((id) => {
-    setAnimes(prev => prev.filter(anime => anime.id !== id));
-  }, []);
-
-  // Toggle favorite
-  const toggleFavorite = useCallback((id) => {
-    setAnimes(prev =>
-      prev.map(anime =>
-        anime.id === id ? { ...anime, isFavorite: !anime.isFavorite } : anime
+  const updateProgress = useCallback(
+    async (id, currentEpisode, currentSeason) => {
+      const anime = animes.find((a) => a.id === id)
+      if (!anime) return
+      const newStatus =
+        currentEpisode >= (anime.totalEpisodes || 0)
+          ? "completed"
+          : anime.status
+      const updateData = {
+        currentEpisode,
+        currentSeason,
+        status: newStatus,
+        lastWatched: new Date().toISOString().split("T")[0],
+      }
+      await Database.updateAnime(id, updateData)
+      setAnimes((prev) =>
+        prev.map((a) => (a.id === id ? { ...a, ...updateData } : a))
       )
-    );
-  }, []);
+    },
+    [animes]
+  )
 
-  // Update episode progress
-  const updateProgress = useCallback((id, currentEpisode, currentSeason) => {
-    setAnimes(prev =>
-      prev.map(anime => {
-        if (anime.id !== id) return anime;
-        
-        const newStatus = currentEpisode >= anime.totalEpisodes ? 'completed' : anime.status;
-        
-        return {
-          ...anime,
-          currentEpisode,
-          currentSeason,
-          status: newStatus,
-          lastWatched: new Date().toISOString().split('T')[0],
-        };
-      })
-    );
-  }, []);
+  const updateNotes = useCallback(async (id, notes) => {
+    await Database.updateAnime(id, { notes })
+    setAnimes((prev) => prev.map((a) => (a.id === id ? { ...a, notes } : a)))
+  }, [])
 
-  // Update notes
-  const updateNotes = useCallback((id, notes) => {
-    setAnimes(prev =>
-      prev.map(anime =>
-        anime.id === id ? { ...anime, notes } : anime
-      )
-    );
-  }, []);
+  const updateStatus = useCallback(async (id, status) => {
+    const updateData = {
+      status,
+      lastWatched: new Date().toISOString().split("T")[0],
+    }
+    await Database.updateAnime(id, updateData)
+    setAnimes((prev) =>
+      prev.map((a) => (a.id === id ? { ...a, ...updateData } : a))
+    )
+  }, [])
 
-  // Update status
-  const updateStatus = useCallback((id, status) => {
-    setAnimes(prev =>
-      prev.map(anime =>
-        anime.id === id
-          ? { ...anime, status, lastWatched: new Date().toISOString().split('T')[0] }
-          : anime
-      )
-    );
-  }, []);
+  const updateRating = useCallback(async (id, rating) => {
+    await Database.updateAnime(id, { rating })
+    setAnimes((prev) => prev.map((a) => (a.id === id ? { ...a, rating } : a)))
+  }, [])
 
-  // Update rating
-  const updateRating = useCallback((id, rating) => {
-    setAnimes(prev =>
-      prev.map(anime =>
-        anime.id === id ? { ...anime, rating } : anime
-      )
-    );
-  }, []);
-
-  // Get filtered and sorted animes
   const getFilteredAnimes = useCallback(() => {
-    let filtered = [...animes];
+    let filtered = [...animes]
+    const genres = (a) => (Array.isArray(a.genres) ? a.genres : [])
 
-    // Apply search filter
     if (searchQuery) {
-      const query = searchQuery.toLowerCase();
+      const q = searchQuery.toLowerCase()
       filtered = filtered.filter(
-        anime =>
-          anime.title.toLowerCase().includes(query) ||
-          anime.titleJapanese?.includes(query) ||
-          anime.genres.some(g => g.toLowerCase().includes(query))
-      );
+        (a) =>
+          (a.title || "").toLowerCase().includes(q) ||
+          (a.titleJapanese || "").includes(q) ||
+          genres(a).some((g) => String(g).toLowerCase().includes(q))
+      )
     }
 
-    // Apply status filter
-    if (filterStatus !== 'all') {
-      filtered = filtered.filter(anime => anime.status === filterStatus);
+    if (filterStatus !== "all") {
+      filtered = filtered.filter((a) => a.status === filterStatus)
     }
 
-    // Apply sorting
     switch (sortBy) {
-      case 'lastWatched':
+      case "lastWatched":
         filtered.sort((a, b) => {
-          if (!a.lastWatched) return 1;
-          if (!b.lastWatched) return -1;
-          return new Date(b.lastWatched) - new Date(a.lastWatched);
-        });
-        break;
-      case 'title':
-        filtered.sort((a, b) => a.title.localeCompare(b.title));
-        break;
-      case 'rating':
-        filtered.sort((a, b) => b.rating - a.rating);
-        break;
-      case 'progress':
+          if (!a.lastWatched) return 1
+          if (!b.lastWatched) return -1
+          return new Date(b.lastWatched) - new Date(a.lastWatched)
+        })
+        break
+      case "title":
+        filtered.sort((a, b) => (a.title || "").localeCompare(b.title || ""))
+        break
+      case "rating":
+        filtered.sort((a, b) => (b.rating || 0) - (a.rating || 0))
+        break
+      case "progress":
         filtered.sort((a, b) => {
-          const progressA = a.currentEpisode / a.totalEpisodes;
-          const progressB = b.currentEpisode / b.totalEpisodes;
-          return progressB - progressA;
-        });
-        break;
-      case 'addedDate':
-        filtered.sort((a, b) => new Date(b.addedDate) - new Date(a.addedDate));
-        break;
+          const pa =
+            a.totalEpisodes && a.currentEpisode
+              ? a.currentEpisode / a.totalEpisodes
+              : 0
+          const pb =
+            b.totalEpisodes && b.currentEpisode
+              ? b.currentEpisode / b.totalEpisodes
+              : 0
+          return pb - pa
+        })
+        break
+      case "addedDate":
+        filtered.sort(
+          (a, b) => new Date(b.addedDate || 0) - new Date(a.addedDate || 0)
+        )
+        break
       default:
-        break;
+        break
     }
 
-    return filtered;
-  }, [animes, searchQuery, filterStatus, sortBy]);
+    return filtered
+  }, [animes, searchQuery, filterStatus, sortBy])
 
-  // Get anime by ID
-  const getAnimeById = useCallback((id) => {
-    return animes.find(anime => anime.id === id);
-  }, [animes]);
+  const getAnimeById = useCallback(
+    (id) => animes.find((a) => a.id === id),
+    [animes]
+  )
 
-  // Get statistics
-  const stats = getAnimeStats(animes);
+  const stats = getAnimeStats(animes)
 
   const value = {
     animes,
+    loading,
     stats,
     searchQuery,
     setSearchQuery,
@@ -185,13 +228,9 @@ export const AnimeProvider = ({ children }) => {
     updateRating,
     getFilteredAnimes,
     getAnimeById,
-  };
+  }
 
-  return (
-    <AnimeContext.Provider value={value}>
-      {children}
-    </AnimeContext.Provider>
-  );
-};
+  return <AnimeContext.Provider value={value}>{children}</AnimeContext.Provider>
+}
 
-export default AnimeContext;
+export default AnimeContext

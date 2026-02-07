@@ -1,4 +1,4 @@
-import React, { useCallback } from 'react';
+import React, { useCallback } from "react"
 import {
   View,
   Text,
@@ -7,21 +7,29 @@ import {
   TouchableOpacity,
   StatusBar,
   SafeAreaView,
-} from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
-import { useAnime } from '../context/AnimeContext';
+  ActivityIndicator,
+} from "react-native"
+import { Ionicons } from "@expo/vector-icons"
+import { useAnime } from "../context/AnimeContext"
 import {
   AnimeCard,
   SearchBar,
   FilterTabs,
   StatsCard,
   EmptyState,
-} from '../components';
-import { colors } from '../constants/colors';
-import { spacing, borderRadius, fontSize, fontWeight, shadows } from '../constants/theme';
+} from "../components"
+import { colors } from "../constants/colors"
+import {
+  spacing,
+  borderRadius,
+  fontSize,
+  fontWeight,
+  shadows,
+} from "../constants/theme"
 
 const DashboardScreen = ({ navigation }) => {
   const {
+    loading,
     stats,
     searchQuery,
     setSearchQuery,
@@ -29,25 +37,28 @@ const DashboardScreen = ({ navigation }) => {
     setFilterStatus,
     toggleFavorite,
     getFilteredAnimes,
-  } = useAnime();
+  } = useAnime()
 
-  const filteredAnimes = getFilteredAnimes();
+  const filteredAnimes = getFilteredAnimes()
 
-  const handleAnimePress = useCallback((anime) => {
-    navigation.navigate('AnimeDetail', { animeId: anime.id });
-  }, [navigation]);
+  const handleAnimePress = useCallback(
+    (anime) => {
+      navigation.navigate("AnimeDetail", { animeId: anime.id })
+    },
+    [navigation]
+  )
 
   const handleAddPress = useCallback(() => {
-    navigation.navigate('AddAnime');
-  }, [navigation]);
+    navigation.navigate("AddAnime")
+  }, [navigation])
 
   const handleMenuPress = useCallback(() => {
     // Hamburger menu - şimdilik boş
-  }, []);
+  }, [])
 
   const handleMenu2Press = useCallback(() => {
     // İkinci menü - şimdilik boş
-  }, []);
+  }, [])
 
   const renderHeader = () => (
     <View style={styles.headerContainer}>
@@ -58,8 +69,15 @@ const DashboardScreen = ({ navigation }) => {
           <Text style={styles.appTitle}>Animora</Text>
         </View>
         <View style={styles.headerButtons}>
-          <TouchableOpacity style={styles.menuButton} onPress={handleMenu2Press}>
-            <Ionicons name="ellipsis-horizontal" size={24} color={colors.textPrimary} />
+          <TouchableOpacity
+            style={styles.menuButton}
+            onPress={handleMenu2Press}
+          >
+            <Ionicons
+              name="ellipsis-horizontal"
+              size={24}
+              color={colors.textPrimary}
+            />
           </TouchableOpacity>
           <TouchableOpacity style={styles.menuButton} onPress={handleMenuPress}>
             <Ionicons name="menu" size={24} color={colors.textPrimary} />
@@ -91,32 +109,52 @@ const DashboardScreen = ({ navigation }) => {
       {/* Results Header */}
       <View style={styles.resultsHeader}>
         <Text style={styles.resultsTitle}>
-          {filterStatus === 'all' ? 'Tüm Animeler' : 'Sonuçlar'}
+          {filterStatus === "all" ? "Tüm Animeler" : "Sonuçlar"}
         </Text>
-        <Text style={styles.resultsCount}>
-          {filteredAnimes.length} anime
-        </Text>
+        <Text style={styles.resultsCount}>{filteredAnimes.length} anime</Text>
       </View>
     </View>
-  );
+  )
 
-  const renderAnimeItem = useCallback(({ item }) => (
-    <View style={styles.cardContainer}>
-      <AnimeCard
-        anime={item}
-        onPress={() => handleAnimePress(item)}
-        onFavoritePress={() => toggleFavorite(item.id)}
-      />
-    </View>
-  ), [handleAnimePress, toggleFavorite]);
+  const renderAnimeItem = useCallback(
+    ({ item }) => (
+      <View style={styles.cardContainer}>
+        <AnimeCard
+          anime={item}
+          onPress={() => handleAnimePress(item)}
+          onFavoritePress={() => toggleFavorite(item.id)}
+        />
+      </View>
+    ),
+    [handleAnimePress, toggleFavorite]
+  )
 
   const renderEmpty = () => (
     <EmptyState
-      icon={searchQuery ? 'search-outline' : 'film-outline'}
-      title={searchQuery ? 'Sonuç bulunamadı' : 'Anime listesi boş'}
-      subtitle={searchQuery ? 'Farklı bir arama deneyin' : 'Yeni anime ekleyerek başlayın'}
+      icon={searchQuery ? "search-outline" : "film-outline"}
+      title={searchQuery ? "Sonuç bulunamadı" : "Anime listesi boş"}
+      subtitle={
+        searchQuery
+          ? "Farklı bir arama deneyin"
+          : "Yeni anime ekleyerek başlayın"
+      }
     />
-  );
+  )
+
+  if (loading) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <StatusBar
+          barStyle="light-content"
+          backgroundColor={colors.background}
+        />
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={colors.primary} />
+          <Text style={styles.loadingText}>Yükleniyor...</Text>
+        </View>
+      </SafeAreaView>
+    )
+  }
 
   return (
     <SafeAreaView style={styles.container}>
@@ -136,8 +174,8 @@ const DashboardScreen = ({ navigation }) => {
         <Ionicons name="add" size={32} color={colors.textPrimary} />
       </TouchableOpacity>
     </SafeAreaView>
-  );
-};
+  )
+}
 
 const styles = StyleSheet.create({
   container: {
@@ -148,15 +186,15 @@ const styles = StyleSheet.create({
     paddingTop: spacing.xl,
   },
   appHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     paddingHorizontal: spacing.lg,
     marginBottom: spacing.lg,
     paddingTop: spacing.md,
   },
   headerButtons: {
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: spacing.sm,
   },
   menuButton: {
@@ -164,8 +202,8 @@ const styles = StyleSheet.create({
     height: 40,
     borderRadius: borderRadius.md,
     backgroundColor: colors.backgroundCard,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     ...shadows.small,
   },
   greeting: {
@@ -182,8 +220,8 @@ const styles = StyleSheet.create({
     height: 48,
     borderRadius: borderRadius.md,
     backgroundColor: colors.primary,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     ...shadows.medium,
   },
   statsSection: {
@@ -194,9 +232,9 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md,
   },
   resultsHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.lg,
     paddingBottom: spacing.md,
@@ -216,18 +254,25 @@ const styles = StyleSheet.create({
   cardContainer: {
     paddingHorizontal: spacing.lg,
   },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    gap: spacing.md,
+  },
+  loadingText: { color: colors.textSecondary },
   fab: {
-    position: 'absolute',
+    position: "absolute",
     right: spacing.lg,
     bottom: spacing.xl,
     width: 64,
     height: 64,
     borderRadius: 32,
     backgroundColor: colors.primary,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     ...shadows.large,
   },
-});
+})
 
-export default DashboardScreen;
+export default DashboardScreen
