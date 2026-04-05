@@ -4,27 +4,27 @@
     "slug": "Animora",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/unnamed.png",
+    "icon": "./assets/app-icon.png",
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
     "splash": {
-      "image": "./assets/unnamed.png",
-      "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
+      "image": "./assets/app-icon.png",
+      "resizeMode": "cover",
+      "backgroundColor": "#0c0c10"
     },
     "ios": {
       "supportsTablet": true
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/unnamed.png",
-        "backgroundColor": "#ffffff"
+        "foregroundImage": "./assets/app-icon.png",
+        "backgroundColor": "#0c0c10"
       },
       "edgeToEdgeEnabled": true,
       "package": "com.suleyman07.Animora"
     },
     "web": {
-      "favicon": "./assets/favicon.png"
+      "favicon": "./assets/app-icon.png"
     },
     "extra": {
       "eas": {
