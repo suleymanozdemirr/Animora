@@ -4,3 +4,4 @@ export { default as SearchBar } from './SearchBar';
 export { default as FilterTabs } from './FilterTabs';
 export { default as StatsCard } from './StatsCard';
 export { default as EmptyState } from './EmptyState';
+export { default as FormInput } from './FormInput';
