@@ -1,8 +1,8 @@
-import React, { useMemo, useState } from "react"
+import React, { useEffect, useMemo, useRef, useState } from "react"
 import {
+  Animated,
   ActivityIndicator,
   Alert,
-  Image,
   Keyboard,
   KeyboardAvoidingView,
   Platform,
@@ -15,8 +15,12 @@ import {
 } from "react-native"
 import { LinearGradient } from "expo-linear-gradient"
 import { FormInput } from "../components"
+import { useAuth } from "../context/AuthContext"
 
 const LoginScreen = ({ navigation }) => {
+  const { signIn } = useAuth()
+  const floatA = useRef(new Animated.Value(0)).current
+  const floatB = useRef(new Animated.Value(0)).current
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [showPassword, setShowPassword] = useState(false)
@@ -25,6 +29,46 @@ const LoginScreen = ({ navigation }) => {
   const [isLoading, setIsLoading] = useState(false)
 
   const emailRegex = useMemo(() => /^[^\s@]+@[^\s@]+\.[^\s@]+$/, [])
+
+  useEffect(() => {
+    const loopA = Animated.loop(
+      Animated.sequence([
+        Animated.timing(floatA, {
+          toValue: 1,
+          duration: 2800,
+          useNativeDriver: true,
+        }),
+        Animated.timing(floatA, {
+          toValue: 0,
+          duration: 2800,
+          useNativeDriver: true,
+        }),
+      ])
+    )
+
+    const loopB = Animated.loop(
+      Animated.sequence([
+        Animated.timing(floatB, {
+          toValue: 1,
+          duration: 3600,
+          useNativeDriver: true,
+        }),
+        Animated.timing(floatB, {
+          toValue: 0,
+          duration: 3600,
+          useNativeDriver: true,
+        }),
+      ])
+    )
+
+    loopA.start()
+    loopB.start()
+
+    return () => {
+      loopA.stop()
+      loopB.stop()
+    }
+  }, [floatA, floatB])
 
   const validate = () => {
     const nextErrors = {}
@@ -51,16 +95,12 @@ const LoginScreen = ({ navigation }) => {
 
     setIsLoading(true)
     try {
-      const payload = {
+      await signIn({
         email: email.trim(),
         password,
-        rememberMe,
-      }
-      console.log("Giriş verileri:", payload)
-      await new Promise((resolve) => setTimeout(resolve, 1200))
-      Alert.alert("Başarılı", "Giriş işlemi başarıyla tamamlandı.")
+      })
     } catch (error) {
-      Alert.alert("Hata", "Giriş sırasında bir sorun oluştu.")
+      Alert.alert("Hata", error?.message || "Giriş sırasında bir sorun oluştu.")
     } finally {
       setIsLoading(false)
     }
@@ -68,20 +108,48 @@ const LoginScreen = ({ navigation }) => {
 
   return (
     <LinearGradient
-      colors={["#FFE7F4", "#EDE2FF", "#DCF3FF"]}
+      colors={["#FAF6FF", "#EFE9FF", "#E4F4FF"]}
       start={{ x: 0, y: 0 }}
       end={{ x: 1, y: 1 }}
       style={styles.gradient}
     >
+      <Animated.View
+        pointerEvents="none"
+        style={[
+          styles.bgBlobLarge,
+          {
+            transform: [
+              {
+                translateY: floatA.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [0, -14],
+                }),
+              },
+            ],
+          },
+        ]}
+      />
+      <Animated.View
+        pointerEvents="none"
+        style={[
+          styles.bgBlobSmall,
+          {
+            transform: [
+              {
+                translateY: floatB.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [0, 10],
+                }),
+              },
+            ],
+          },
+        ]}
+      />
       <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
         <KeyboardAvoidingView
           style={styles.container}
           behavior={Platform.OS === "ios" ? "padding" : "height"}
         >
-          <Image
-            source={require("../../assets/app-icon.png")}
-            style={styles.backgroundIllustration}
-          />
           <View style={styles.card}>
             <Text style={styles.title}>Giriş Yap</Text>
             <Text style={styles.subtitle}>
@@ -119,7 +187,9 @@ const LoginScreen = ({ navigation }) => {
                 />
                 <Text style={styles.rememberText}>Beni Hatırlat</Text>
               </View>
-              <TouchableOpacity onPress={() => navigation.navigate("ForgotPassword")}>
+              <TouchableOpacity
+                onPress={() => navigation.navigate("ForgotPassword")}
+              >
                 <Text style={styles.forgotText}>Şifremi Unuttum</Text>
               </TouchableOpacity>
             </View>
@@ -155,19 +225,30 @@ const LoginScreen = ({ navigation }) => {
 const styles = StyleSheet.create({
   gradient: {
     flex: 1,
+    backgroundColor: "#F4EEFF",
   },
   container: {
     flex: 1,
     justifyContent: "center",
     paddingHorizontal: 20,
   },
-  backgroundIllustration: {
+  bgBlobLarge: {
     position: "absolute",
-    top: "12%",
-    right: -24,
-    width: 230,
-    height: 230,
-    opacity: 0.08,
+    top: "8%",
+    right: -36,
+    width: 210,
+    height: 210,
+    borderRadius: 120,
+    backgroundColor: "rgba(164, 129, 255, 0.20)",
+  },
+  bgBlobSmall: {
+    position: "absolute",
+    bottom: "14%",
+    left: -22,
+    width: 150,
+    height: 150,
+    borderRadius: 90,
+    backgroundColor: "rgba(124, 199, 255, 0.20)",
   },
   title: {
     color: "#31254F",
@@ -192,7 +273,7 @@ const styles = StyleSheet.create({
     }),
   },
   card: {
-    backgroundColor: "rgba(255, 255, 255, 0.8)",
+    backgroundColor: "rgba(255, 255, 255, 0.88)",
     borderRadius: 24,
     padding: 22,
     borderWidth: 1,

@@ -1,5 +1,6 @@
-import React, { useMemo, useState } from "react"
+import React, { useEffect, useMemo, useRef, useState } from "react"
 import {
+  Animated,
   Alert,
   ActivityIndicator,
   KeyboardAvoidingView,
@@ -11,8 +12,12 @@ import {
 } from "react-native"
 import { LinearGradient } from "expo-linear-gradient"
 import { FormInput } from "../components"
+import { useAuth } from "../context/AuthContext"
 
 const RegisterScreen = ({ navigation }) => {
+  const { signUp } = useAuth()
+  const floatA = useRef(new Animated.Value(0)).current
+  const floatB = useRef(new Animated.Value(0)).current
   const [username, setUsername] = useState("")
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
@@ -23,6 +28,46 @@ const RegisterScreen = ({ navigation }) => {
   const [isLoading, setIsLoading] = useState(false)
 
   const emailRegex = useMemo(() => /^[^\s@]+@[^\s@]+\.[^\s@]+$/, [])
+
+  useEffect(() => {
+    const loopA = Animated.loop(
+      Animated.sequence([
+        Animated.timing(floatA, {
+          toValue: 1,
+          duration: 2800,
+          useNativeDriver: true,
+        }),
+        Animated.timing(floatA, {
+          toValue: 0,
+          duration: 2800,
+          useNativeDriver: true,
+        }),
+      ])
+    )
+
+    const loopB = Animated.loop(
+      Animated.sequence([
+        Animated.timing(floatB, {
+          toValue: 1,
+          duration: 3600,
+          useNativeDriver: true,
+        }),
+        Animated.timing(floatB, {
+          toValue: 0,
+          duration: 3600,
+          useNativeDriver: true,
+        }),
+      ])
+    )
+
+    loopA.start()
+    loopB.start()
+
+    return () => {
+      loopA.stop()
+      loopB.stop()
+    }
+  }, [floatA, floatB])
 
   const validate = () => {
     const nextErrors = {}
@@ -60,17 +105,21 @@ const RegisterScreen = ({ navigation }) => {
 
     setIsLoading(true)
     try {
-      const payload = {
+      const result = await signUp({
         username: username.trim(),
         email: email.trim(),
         password,
-      }
-      console.log("Kayıt verileri:", payload)
+      })
 
-      await new Promise((resolve) => setTimeout(resolve, 1200))
-      Alert.alert("Başarılı", "Kayıt işlemi başarıyla tamamlandı.")
+      if (!result?.session) {
+        Alert.alert(
+          "Başarılı",
+          "Kayıt tamamlandı. E-postanı doğruladıktan sonra giriş yapabilirsin."
+        )
+        navigation.navigate("Login")
+      }
     } catch (error) {
-      Alert.alert("Hata", "Kayıt sırasında bir sorun oluştu.")
+      Alert.alert("Hata", error?.message || "Kayıt sırasında bir sorun oluştu.")
     } finally {
       setIsLoading(false)
     }
@@ -78,11 +127,43 @@ const RegisterScreen = ({ navigation }) => {
 
   return (
     <LinearGradient
-      colors={["#FFE7F4", "#EDE2FF", "#DCF3FF"]}
+      colors={["#FAF6FF", "#EFE9FF", "#E4F4FF"]}
       start={{ x: 0, y: 0 }}
       end={{ x: 1, y: 1 }}
       style={styles.gradient}
     >
+      <Animated.View
+        pointerEvents="none"
+        style={[
+          styles.bgBlobLarge,
+          {
+            transform: [
+              {
+                translateY: floatA.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [0, -14],
+                }),
+              },
+            ],
+          },
+        ]}
+      />
+      <Animated.View
+        pointerEvents="none"
+        style={[
+          styles.bgBlobSmall,
+          {
+            transform: [
+              {
+                translateY: floatB.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [0, 10],
+                }),
+              },
+            ],
+          },
+        ]}
+      />
       <KeyboardAvoidingView
         style={styles.container}
         behavior={Platform.OS === "ios" ? "padding" : "height"}
@@ -129,7 +210,9 @@ const RegisterScreen = ({ navigation }) => {
             onChangeText={setConfirmPassword}
             placeholder="********"
             secureTextEntry={!showConfirmPassword}
-            rightIconName={showConfirmPassword ? "eye-off-outline" : "eye-outline"}
+            rightIconName={
+              showConfirmPassword ? "eye-off-outline" : "eye-outline"
+            }
             onRightIconPress={() => setShowConfirmPassword((prev) => !prev)}
             error={errors.confirmPassword}
           />
@@ -151,7 +234,8 @@ const RegisterScreen = ({ navigation }) => {
             style={styles.loginLink}
           >
             <Text style={styles.loginText}>
-              Zaten hesabınız var mı? <Text style={styles.loginTextBold}>Giriş Yap</Text>
+              Zaten hesabınız var mı?{" "}
+              <Text style={styles.loginTextBold}>Giriş Yap</Text>
             </Text>
           </TouchableOpacity>
         </View>
@@ -163,14 +247,33 @@ const RegisterScreen = ({ navigation }) => {
 const styles = StyleSheet.create({
   gradient: {
     flex: 1,
+    backgroundColor: "#F4EEFF",
   },
   container: {
     flex: 1,
     justifyContent: "center",
     paddingHorizontal: 20,
   },
+  bgBlobLarge: {
+    position: "absolute",
+    top: "8%",
+    right: -36,
+    width: 210,
+    height: 210,
+    borderRadius: 120,
+    backgroundColor: "rgba(164, 129, 255, 0.20)",
+  },
+  bgBlobSmall: {
+    position: "absolute",
+    bottom: "14%",
+    left: -22,
+    width: 150,
+    height: 150,
+    borderRadius: 90,
+    backgroundColor: "rgba(124, 199, 255, 0.20)",
+  },
   card: {
-    backgroundColor: "rgba(255, 255, 255, 0.8)",
+    backgroundColor: "rgba(255, 255, 255, 0.88)",
     borderRadius: 24,
     padding: 22,
     borderWidth: 1,
